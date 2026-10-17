@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>番茄钟 | Pomodoro Timer</title>
+<style>
+:root{--c:#00BCD4;--cd:#0097A7;--w:#fff;--bg:#f0f8f9;--t:#333}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--t);display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;user-select:none}
+.lang-btn{position:fixed;top:20px;left:20px;z-index:100;padding:8px 16px;background:var(--c);color:var(--w);border:none;border-radius:20px;cursor:pointer;font-size:14px;font-weight:600;transition:.2s}
+.lang-btn:hover{background:var(--cd)}
+.fs-btn{position:fixed;top:20px;right:20px;z-index:100;padding:8px 16px;background:var(--c);color:var(--w);border:none;border-radius:20px;cursor:pointer;font-size:14px;font-weight:600;transition:.2s}
+.fs-btn:hover{background:var(--cd)}
+.container{text-align:center;padding:40px 20px}
+.timer-box{width:280px;height:280px;border-radius:50%;background:var(--w);border:6px solid var(--c);display:flex;align-items:center;justify-content:center;margin:0 auto 30px;box-shadow:0 8px 32px rgba(0,188,212,0.2);transition:border-color .3s}
+.timer-box.break{border-color:#FF9800}
+.timer-display{font-size:64px;font-weight:700;color:var(--c);letter-spacing:4px;transition:color .3s}
+.timer-box.break .timer-display{color:#FF9800}
+.mode-label{font-size:18px;color:var(--c);margin-bottom:20px;font-weight:600;transition:color .3s}
+.mode-label.break{color:#FF9800}
+.btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:20px}
+.btns button{padding:12px 28px;border:none;border-radius:24px;font-size:16px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit}
+.btn-start{background:var(--c);color:var(--w)}
+.btn-start:hover{background:var(--cd)}
+.btn-reset{background:var(--w);color:var(--c);border:2px solid var(--c)}
+.btn-reset:hover{background:#e0f7fa}
+.session-count{font-size:14px;color:#999;margin-top:20px}
+@media(max-width:500px){.timer-box{width:220px;height:220px}.timer-display{font-size:48px}}
+</style>
+</head>
+<body>
+<button class="lang-btn" onclick="toggleLang()" data-key="langBtn">中/EN</button>
+<button class="fs-btn" onclick="toggleFS()" data-key="fsBtn">全屏</button>
+<div class="container">
+  <div class="timer-box" id="timerBox">
+    <span class="timer-display" id="timerDisplay">25:00</span>
+  </div>
+  <div class="mode-label" id="modeLabel" data-key="focus">专注时间</div>
+  <div class="btns">
+    <button class="btn-start" id="btnStart" onclick="toggleTimer()" data-key="start">开始</button>
+    <button class="btn-reset" onclick="resetTimer()" data-key="reset">重置</button>
+  </div>
+  <div class="session-count" id="sessionCount" data-key="sessions">已完成: 0 个番茄</div>
+</div>
+<script>
+/* ===== 番茄钟 / Pomodoro Timer ===== */
+var i18n={zh:{langBtn:"中/EN",fsBtn:"全屏",focus:"专注时间",break:"休息时间",start:"开始",pause:"暂停",reset:"重置",sessions:"已完成: {n} 个番茄"},en:{langBtn:"中/EN",fsBtn:"Fullscreen",focus:"Focus",break:"Break",start:"Start",pause:"Pause",reset:"Reset",sessions:"Completed: {n} pomodoros"}};
+var lang="zh",minutes=25,seconds=0,timerId=null,isRunning=false,isBreak=false,sessionCount=0;
+var FOCUS=25,BREAK=5;
+function t(key,replace){var s=i18n[lang][key];if(replace)for(var k in replace)s=s.replace("{"+k+"}",replace[k]);return s}
+function updateUI(){document.querySelectorAll("[data-key]").forEach(function(el){var k=el.getAttribute("data-key");if(el.textContent.trim()==="中/EN"||el.textContent.trim()==="全屏"||el.tagName==="DIV"){if(k==="sessions")el.textContent=t(k,{n:sessionCount});else if(k==="focus"||k==="break")el.textContent=isBreak?t("break"):t("focus");else el.textContent=t(k)}});document.getElementById("btnStart").textContent=isRunning?t("pause"):t("start")}
+function toggleLang(){lang=lang==="zh"?"en":"zh";updateUI()}
+function toggleFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen()}else{document.exitFullscreen()}}
+function format(m,s){return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
+function updateDisplay(){document.getElementById("timerDisplay").textContent=format(minutes,seconds)}
+function tick(){if(seconds>0){seconds--}else if(minutes>0){minutes--;seconds=59}else{clearInterval(timerId);timerId=null;isRunning=false;if(isBreak){isBreak=false;minutes=FOCUS;sessionCount++;document.getElementById("timerBox").classList.remove("break");document.getElementById("modeLabel").classList.remove("break")}else{isBreak=true;minutes=BREAK;document.getElementById("timerBox").classList.add("break");document.getElementById("modeLabel").classList.add("break")}seconds=0;updateDisplay();updateUI();notify();return}updateDisplay()}
+function toggleTimer(){if(isRunning){clearInterval(timerId);timerId=null;isRunning=false}else{timerId=setInterval(tick,1000);isRunning=true}updateUI()}
+function resetTimer(){clearInterval(timerId);timerId=null;isRunning=false;isBreak=false;minutes=FOCUS;seconds=0;document.getElementById("timerBox").classList.remove("break");document.getElementById("modeLabel").classList.remove("break");updateDisplay();updateUI()}
+function notify(){if(Notification&&Notification.permission==="granted"){new Notification(t(isBreak?"focus":"break"),{body:t(isBreak?"focus":"break")})}}
+if(Notification&&Notification.permission==="default"){Notification.requestPermission()}
+updateDisplay();updateUI();
+</script>
+</body>
+</html>
